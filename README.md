@@ -1,4 +1,4 @@
-# 🛒 ZEE - Mobile E-Commerce Platform
+# 🛒 Zee - Mobile E-Commerce Platform
 
 ShopMate is a full-stack, cross-platform mobile e-commerce application designed to provide a seamless shopping experience for customers and a powerful, unified management interface for store administrators. 
 
