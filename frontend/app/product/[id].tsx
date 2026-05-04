@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useProducts, Product } from '../../context/ProductContext';
-import { useCart } from '../../context/CartContext';
+import { useAuth } from '../../context/AuthContext';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useTheme } from '../../context/ThemeContext';
 import api from '../../api/axios';
 
 interface Review {
@@ -19,12 +20,15 @@ export default function ProductDetailsScreen() {
   const router = useRouter();
   const { getProduct } = useProducts();
   const { addToCart } = useCart();
+  const { user } = useAuth();
+  const { colors } = useTheme();
   
   const [product, setProduct] = useState<Product | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [avgRating, setAvgRating] = useState<string>('0');
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
+  const [inWishlist, setInWishlist] = useState(false);
   
   // Review form state
   const [rating, setRating] = useState(5);
@@ -42,8 +46,15 @@ export default function ProductDetailsScreen() {
         const res = await api.get(`/reviews/product/${id}`);
         setReviews(res.data.reviews);
         setAvgRating(res.data.avgRating);
+        
+        // Check if in wishlist
+        if (user) {
+          const wishRes = await api.get('/wishlist');
+          const isWishlisted = wishRes.data.some((item: any) => item._id === id);
+          setInWishlist(isWishlisted);
+        }
       } catch (error) {
-        console.error('Failed to fetch reviews', error);
+        console.error('Failed to fetch details', error);
       } finally {
         setLoading(false);
       }
@@ -58,6 +69,26 @@ export default function ProductDetailsScreen() {
       Alert.alert('Success', 'Added to cart!');
     } catch (error) {
       Alert.alert('Error', 'Could not add to cart');
+    }
+  };
+
+  const toggleWishlist = async () => {
+    if (!user) {
+      Alert.alert('Please Login', 'You must be logged in to manage your wishlist.');
+      return;
+    }
+    try {
+      if (inWishlist) {
+        await api.delete(`/wishlist/${id}`);
+        setInWishlist(false);
+        Alert.alert('Wishlist', 'Removed from wishlist!');
+      } else {
+        await api.post('/wishlist', { productId: id });
+        setInWishlist(true);
+        Alert.alert('Wishlist', 'Added to wishlist!');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to update wishlist');
     }
   };
 
@@ -82,6 +113,16 @@ export default function ProductDetailsScreen() {
     }
   };
 
+  const handleDeleteReview = async (reviewId: string) => {
+    try {
+      await api.delete(`/reviews/${reviewId}`);
+      setReviews(reviews.filter(r => r._id !== reviewId));
+      Alert.alert('Success', 'Review deleted');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to delete review');
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -103,34 +144,39 @@ export default function ProductDetailsScreen() {
   }
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Stack.Screen options={{ title: product.name }} />
-      <ScrollView style={styles.container}>
+      <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
         <Image 
           source={{ uri: imageError || !product.image ? 'https://via.placeholder.com/400' : product.image }} 
           style={styles.image} 
           onError={() => setImageError(true)}
         />
         
-        <View style={styles.infoContainer}>
-          <Text style={styles.name}>{product.name}</Text>
-          <View style={styles.ratingRow}>
+        <View style={[styles.infoContainer, { backgroundColor: colors.card }]}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={[styles.name, { flex: 1, marginRight: 10, marginBottom: 0, color: colors.text }]}>{product.name}</Text>
+            <TouchableOpacity onPress={toggleWishlist}>
+              <MaterialIcons name={inWishlist ? "favorite" : "favorite-border"} size={28} color="#FF3B30" />
+            </TouchableOpacity>
+          </View>
+          <View style={[styles.ratingRow, { marginTop: 10 }]}>
             <MaterialIcons name="star" size={20} color="#FFD700" />
             <Text style={styles.ratingText}>{avgRating} ({reviews.length} reviews)</Text>
           </View>
-          <Text style={styles.price}>${product.price.toFixed(2)}</Text>
-          <Text style={styles.description}>{product.description}</Text>
+          <Text style={[styles.price, { color: colors.primary }]}>${product.price.toFixed(2)}</Text>
+          <Text style={[styles.description, { color: colors.text }]}>{product.description}</Text>
           
           <Text style={styles.stock}>Availability: {product.stock > 0 ? 'In Stock' : 'Out of Stock'}</Text>
         </View>
 
         {/* Reviews Section */}
-        <View style={styles.reviewsContainer}>
-          <Text style={styles.sectionTitle}>Reviews</Text>
+        <View style={[styles.reviewsContainer, { backgroundColor: colors.card }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Reviews</Text>
           
           {/* Write a Review */}
-          <View style={styles.writeReviewContainer}>
-            <Text style={styles.writeReviewTitle}>Leave a Review</Text>
+          <View style={[styles.writeReviewContainer, { backgroundColor: colors.inputBackground }]}>
+            <Text style={[styles.writeReviewTitle, { color: colors.text }]}>Leave a Review</Text>
             <View style={styles.starSelectRow}>
               {[1, 2, 3, 4, 5].map((star) => (
                 <TouchableOpacity key={star} onPress={() => setRating(star)}>
@@ -139,8 +185,9 @@ export default function ProductDetailsScreen() {
               ))}
             </View>
             <TextInput
-              style={styles.reviewInput}
+              style={[styles.reviewInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
               placeholder="Write your experience..."
+              placeholderTextColor={colors.textMuted}
               multiline
               value={comment}
               onChangeText={setComment}
@@ -155,17 +202,24 @@ export default function ProductDetailsScreen() {
             <Text style={styles.noReviews}>No reviews yet. Be the first!</Text>
           ) : (
             reviews.map((rev) => (
-              <View key={rev._id} style={styles.reviewCard}>
+              <View key={rev._id} style={[styles.reviewCard, { borderBottomColor: colors.border }]}>
                 <View style={styles.reviewHeader}>
-                  <Text style={styles.reviewerName}>{rev.user.name}</Text>
-                  <View style={{ flexDirection: 'row' }}>
-                    {[...Array(5)].map((_, i) => (
-                      <MaterialIcons key={i} name={i < rev.rating ? 'star' : 'star-border'} size={16} color="#FFD700" />
-                    ))}
+                  <Text style={[styles.reviewerName, { color: colors.text }]}>{rev.user.name}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{ flexDirection: 'row', marginRight: 10 }}>
+                      {[...Array(5)].map((_, i) => (
+                        <MaterialIcons key={i} name={i < rev.rating ? 'star' : 'star-border'} size={16} color="#FFD700" />
+                      ))}
+                    </View>
+                    {(user?._id === rev.user._id || user?.role === 'admin') && (
+                      <TouchableOpacity onPress={() => handleDeleteReview(rev._id)}>
+                        <MaterialIcons name="delete-outline" size={20} color="#FF3B30" />
+                      </TouchableOpacity>
+                    )}
                   </View>
                 </View>
                 <Text style={styles.reviewDate}>{new Date(rev.createdAt).toLocaleDateString()}</Text>
-                <Text style={styles.reviewComment}>{rev.comment}</Text>
+                <Text style={[styles.reviewComment, { color: colors.text }]}>{rev.comment}</Text>
               </View>
             ))
           )}
@@ -173,9 +227,9 @@ export default function ProductDetailsScreen() {
       </ScrollView>
 
       {/* Sticky Bottom Bar */}
-      <View style={styles.bottomBar}>
-        <Text style={styles.bottomPrice}>${product.price.toFixed(2)}</Text>
-        <TouchableOpacity style={[styles.addToCartBtn, product.stock === 0 && { backgroundColor: '#ccc' }]} onPress={handleAddToCart} disabled={product.stock === 0}>
+      <View style={[styles.bottomBar, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
+        <Text style={[styles.bottomPrice, { color: colors.text }]}>${product.price.toFixed(2)}</Text>
+        <TouchableOpacity style={[styles.addToCartBtn, product.stock === 0 && { backgroundColor: colors.border }]} onPress={handleAddToCart} disabled={product.stock === 0}>
           <Text style={styles.addToCartText}>{product.stock > 0 ? 'Add to Cart' : 'Out of Stock'}</Text>
         </TouchableOpacity>
       </View>

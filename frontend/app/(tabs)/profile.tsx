@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, SafeAreaView, Alert } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import api from '../../api/axios';
 
@@ -18,7 +19,13 @@ export default function ProfileScreen() {
   const [loadingOrders, setLoadingOrders] = useState(true);
 
   const [activeTab, setActiveTab] = useState<'Wishlist' | 'Settings'>('Settings');
-  const [currentView, setCurrentView] = useState<'Main' | 'Orders'>('Main');
+  const [currentView, setCurrentView] = useState<'Main' | 'Orders' | 'Notifications'>('Main');
+
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(true);
+  const { isDarkMode, toggleTheme, colors } = useTheme();
+  const [wishlist, setWishlist] = useState<any[]>([]);
+  const [loadingWishlist, setLoadingWishlist] = useState(false);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -31,8 +38,36 @@ export default function ProfileScreen() {
         setLoadingOrders(false);
       }
     };
+    
+    const fetchNotifications = async () => {
+      try {
+        const res = await api.get('/notifications');
+        setNotifications(res.data);
+      } catch (error) {
+        console.error('Failed to fetch notifications', error);
+      } finally {
+        setLoadingNotifications(false);
+      }
+    };
+
+    const fetchWishlist = async () => {
+      setLoadingWishlist(true);
+      try {
+        const res = await api.get('/wishlist');
+        setWishlist(res.data);
+      } catch (error: any) {
+        const status = error.response?.status;
+        const message = error.response?.data?.message || error.message;
+        console.error(`Failed to fetch wishlist (Status: ${status}):`, message);
+      } finally {
+        setLoadingWishlist(false);
+      }
+    };
+
     fetchOrders();
-  }, []);
+    fetchNotifications();
+    if (user) fetchWishlist();
+  }, [user]);
 
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to log out?', [
@@ -89,6 +124,68 @@ export default function ProfileScreen() {
     </View>
   );
 
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await api.put(`/notifications/${id}/read`);
+      setNotifications(notifications.map(n => n._id === id ? { ...n, read: true } : n));
+    } catch (error) {
+      console.error('Failed to mark notification as read', error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await api.put('/notifications/read-all');
+      setNotifications(notifications.map(n => ({ ...n, read: true })));
+      Alert.alert('Success', 'All notifications marked as read');
+    } catch (error) {
+      console.error('Failed to mark all as read', error);
+    }
+  };
+
+  const renderNotificationsList = () => (
+    <View style={{ flex: 1 }}>
+      <View style={styles.subHeader}>
+        <TouchableOpacity onPress={() => setCurrentView('Main')} style={styles.backBtn}>
+          <MaterialIcons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.subHeaderTitle}>Notifications</Text>
+        <TouchableOpacity onPress={handleMarkAllAsRead} style={styles.markAllBtn}>
+          <Text style={styles.markAllText}>Mark all read</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.section}>
+        {loadingNotifications ? (
+          <ActivityIndicator color="#FF9F0A" style={{ marginVertical: 20 }} />
+        ) : notifications.length === 0 ? (
+          <Text style={styles.noOrdersText}>You have no notifications.</Text>
+        ) : (
+          notifications.map((notif) => (
+            <TouchableOpacity 
+              key={notif._id} 
+              style={[styles.notificationCard, notif.read ? styles.notificationRead : styles.notificationUnread]}
+              onPress={() => !notif.read && handleMarkAsRead(notif._id)}
+            >
+              <View style={styles.notificationIcon}>
+                <Ionicons 
+                  name={notif.type.includes('payment') ? 'card' : notif.type.includes('order') ? 'cube' : 'notifications'} 
+                  size={24} 
+                  color={notif.read ? '#8E8E93' : '#FF9F0A'} 
+                />
+              </View>
+              <View style={styles.notificationContent}>
+                <Text style={[styles.notificationTitle, notif.read && styles.textRead]}>{notif.title}</Text>
+                <Text style={[styles.notificationMessage, notif.read && styles.textRead]}>{notif.message}</Text>
+                <Text style={styles.notificationDate}>{new Date(notif.createdAt).toLocaleDateString()} at {new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+              </View>
+              {!notif.read && <View style={styles.unreadDot} />}
+            </TouchableOpacity>
+          ))
+        )}
+      </View>
+    </View>
+  );
+
   const renderMainView = () => (
     <View style={styles.mainContainer}>
       {/* Top Navigation Header */}
@@ -96,9 +193,12 @@ export default function ProfileScreen() {
         <TouchableOpacity style={styles.iconBtn}>
           <MaterialIcons name="menu" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.screenTitle}>Settings</Text>
-        <TouchableOpacity style={styles.iconBtn}>
+        <Text style={[styles.screenTitle, !isDarkMode && { color: '#000' }]}>Settings</Text>
+        <TouchableOpacity style={styles.iconBtn} onPress={() => setCurrentView('Notifications')}>
           <Ionicons name="notifications-outline" size={24} color="#fff" />
+          {notifications.filter(n => !n.read).length > 0 && (
+            <View style={{position: 'absolute', top: 5, right: 5, width: 10, height: 10, borderRadius: 5, backgroundColor: '#FF453A'}} />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -108,7 +208,7 @@ export default function ProfileScreen() {
           <View style={styles.avatarCircle}>
             <MaterialIcons name="person" size={70} color="#fff" />
           </View>
-          <TouchableOpacity style={styles.cameraBtn}>
+          <TouchableOpacity style={styles.cameraBtn} onPress={() => Alert.alert('Edit Avatar', 'Upload feature coming soon.')}>
             <MaterialIcons name="camera-alt" size={16} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -148,8 +248,34 @@ export default function ProfileScreen() {
       </View>
 
       {activeTab === 'Wishlist' ? (
-        <View style={styles.emptyContent}>
-          <Text style={styles.emptyText}>Your wishlist is empty.</Text>
+        <View style={styles.wishlistContent}>
+          {loadingWishlist ? (
+            <ActivityIndicator color="#FF9F0A" style={{ marginVertical: 20 }} />
+          ) : wishlist.length === 0 ? (
+            <View style={styles.emptyContent}>
+              <Text style={styles.emptyText}>Your wishlist is empty.</Text>
+            </View>
+          ) : (
+            wishlist.map(item => (
+              <View key={item._id} style={styles.wishlistCard}>
+                <View style={styles.wishlistInfo}>
+                  <Text style={styles.wishlistName}>{item.name}</Text>
+                  <Text style={styles.wishlistPrice}>${item.price.toFixed(2)}</Text>
+                </View>
+                <TouchableOpacity onPress={async () => {
+                  try {
+                    await api.delete(`/wishlist/${item._id}`);
+                    setWishlist(wishlist.filter(w => w._id !== item._id));
+                    Alert.alert('Success', 'Removed from wishlist');
+                  } catch (e) {
+                    Alert.alert('Error', 'Failed to remove from wishlist');
+                  }
+                }} style={styles.wishlistRemoveBtn}>
+                  <MaterialIcons name="delete-outline" size={24} color="#FF453A" />
+                </TouchableOpacity>
+              </View>
+            ))
+          )}
         </View>
       ) : (
         <View style={styles.settingsContent}>
@@ -157,7 +283,7 @@ export default function ProfileScreen() {
           <View style={styles.generalInfoCard}>
             <View style={styles.generalInfoHeader}>
               <Text style={styles.generalInfoTitle}>General Info</Text>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={() => Alert.alert('Edit Profile', 'Edit profile feature coming soon.')}>
                 <MaterialIcons name="edit" size={20} color="#FF9F0A" />
               </TouchableOpacity>
             </View>
@@ -184,21 +310,26 @@ export default function ProfileScreen() {
 
           <View style={styles.listItemDivider} />
 
-          <TouchableOpacity style={styles.listItem} onPress={() => Alert.alert('Coming Soon', 'Notifications coming soon')}>
+          <TouchableOpacity style={styles.listItem} onPress={() => setCurrentView('Notifications')}>
             <View style={[styles.listIconContainer, { backgroundColor: 'rgba(255, 69, 58, 0.15)' }]}>
               <Ionicons name="notifications-outline" size={20} color="#FF453A" />
             </View>
             <Text style={styles.listItemText}>Notifications</Text>
+            {notifications.filter(n => !n.read).length > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>{notifications.filter(n => !n.read).length}</Text>
+              </View>
+            )}
             <MaterialIcons name="chevron-right" size={24} color="#888" />
           </TouchableOpacity>
 
           <View style={styles.listItemDivider} />
 
-          <TouchableOpacity style={styles.listItem} onPress={() => Alert.alert('Theme', 'Light mode toggled')}>
+          <TouchableOpacity style={styles.listItem} onPress={toggleTheme}>
             <View style={[styles.listIconContainer, { backgroundColor: 'rgba(255, 214, 10, 0.15)' }]}>
-              <Ionicons name="sunny-outline" size={20} color="#FFD60A" />
+              <Ionicons name={isDarkMode ? "sunny-outline" : "moon-outline"} size={20} color="#FFD60A" />
             </View>
-            <Text style={styles.listItemText}>Switch to Light Mode</Text>
+            <Text style={[styles.listItemText, !isDarkMode && { color: '#000' }]}>{isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}</Text>
             <MaterialIcons name="chevron-right" size={24} color="#888" />
           </TouchableOpacity>
 
@@ -214,9 +345,11 @@ export default function ProfileScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
-        {currentView === 'Main' ? renderMainView() : renderOrdersList()}
+        {currentView === 'Main' && renderMainView()}
+        {currentView === 'Orders' && renderOrdersList()}
+        {currentView === 'Notifications' && renderNotificationsList()}
       </ScrollView>
     </SafeAreaView>
   );
@@ -271,6 +404,14 @@ const styles = StyleSheet.create({
   // Empty Content
   emptyContent: { padding: 30, alignItems: 'center', marginTop: 20 },
   emptyText: { color: '#8E8E93', fontSize: 16 },
+  
+  // Wishlist
+  wishlistContent: { flex: 1, paddingTop: 10 },
+  wishlistCard: { flexDirection: 'row', backgroundColor: '#1C1C1E', borderRadius: 12, padding: 15, marginBottom: 10, alignItems: 'center' },
+  wishlistInfo: { flex: 1 },
+  wishlistName: { fontSize: 16, fontWeight: 'bold', color: '#fff', marginBottom: 4 },
+  wishlistPrice: { fontSize: 14, color: '#0A84FF', fontWeight: 'bold' },
+  wishlistRemoveBtn: { padding: 8, backgroundColor: 'rgba(255, 69, 58, 0.1)', borderRadius: 8 },
 
   // Orders View
   subHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, paddingHorizontal: 20, marginTop: 20 },
@@ -290,4 +431,20 @@ const styles = StyleSheet.create({
   itemsSummary: { fontSize: 14, color: '#ccc' },
   orderFooter: { borderTopWidth: 1, borderTopColor: '#3A3A3C', paddingTop: 10, marginTop: 5 },
   orderTotal: { fontSize: 16, fontWeight: 'bold', color: '#FF9F0A', textAlign: 'right' },
+
+  // Notifications View
+  markAllBtn: { marginLeft: 'auto', backgroundColor: 'rgba(255, 159, 10, 0.15)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  markAllText: { color: '#FF9F0A', fontSize: 12, fontWeight: 'bold' },
+  notificationCard: { flexDirection: 'row', padding: 15, borderBottomWidth: 1, borderBottomColor: '#3A3A3C', alignItems: 'flex-start' },
+  notificationUnread: { backgroundColor: 'rgba(255, 159, 10, 0.05)' },
+  notificationRead: { backgroundColor: 'transparent' },
+  notificationIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#2C2C2E', justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+  notificationContent: { flex: 1 },
+  notificationTitle: { fontSize: 16, fontWeight: 'bold', color: '#fff', marginBottom: 4 },
+  notificationMessage: { fontSize: 14, color: '#E5E5EA', marginBottom: 8, lineHeight: 20 },
+  notificationDate: { fontSize: 12, color: '#8E8E93' },
+  textRead: { color: '#8E8E93' },
+  unreadDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#FF9F0A', marginLeft: 10, marginTop: 5 },
+  notificationBadge: { backgroundColor: '#FF453A', borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 6, marginRight: 10 },
+  notificationBadgeText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
 });

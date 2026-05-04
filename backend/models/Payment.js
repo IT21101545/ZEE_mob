@@ -5,8 +5,9 @@ const paymentSchema = new mongoose.Schema({
   order:         { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true },
   amount:        { type: Number, required: true },
   method:        { type: String, enum: ['CreditCard', 'DebitCard', 'Cash', 'BankTransfer'], required: true },
-  status:        { type: String, enum: ['Pending', 'Completed', 'Failed', 'Refunded'], default: 'Pending' },
+  status:        { type: String, enum: ['Pending', 'PendingReview', 'Completed', 'Failed', 'Refunded', 'Cancelled'], default: 'Pending' },
   transactionId: { type: String, default: '' },
+  receiptImage:  { type: String, default: '' },  // URL of uploaded bank transfer receipt
 }, { timestamps: true });
 
 module.exports = mongoose.model('Payment', paymentSchema);

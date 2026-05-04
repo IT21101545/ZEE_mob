@@ -62,6 +62,10 @@ const updateProduct = async (req, res) => {
     product.category    = category    || product.category;
     product.stock       = stock       !== undefined ? stock : product.stock;
 
+    if (!product.createdBy) {
+      product.createdBy = req.user._id;
+    }
+
     if (req.file) {
       if (product.imagePublicId)
         await cloudinary.uploader.destroy(product.imagePublicId);
@@ -93,4 +97,18 @@ const deleteProduct = async (req, res) => {
   }
 };
 
-module.exports = { getProducts, getProductById, createProduct, updateProduct, deleteProduct };
+// GET /api/products/categories
+const getCategories = async (req, res) => {
+  try {
+    const categories = await Product.aggregate([
+      { $group: { _id: '$category', count: { $sum: 1 } } },
+      { $project: { name: '$_id', count: 1, _id: 0 } },
+      { $sort: { count: -1 } }
+    ]);
+    res.json(categories);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = { getProducts, getProductById, createProduct, updateProduct, deleteProduct, getCategories };

@@ -2,9 +2,10 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
-// Using your computer's local Wi-Fi IP address for physical device testing
+// Using the hosted Render backend for physical device testing/APK build
 const getBaseUrl = () => {
-  return 'http://192.168.8.178:5000/api';
+   return 'http://192.168.8.178:5000/api';
+  // return 'https://zee-mob.onrender.com/api';
 };
 
 const api = axios.create({

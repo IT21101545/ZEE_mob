@@ -17,8 +17,10 @@ app.use('/api/auth',     require('./routes/authRoutes'));
 app.use('/api/products', require('./routes/productRoutes'));
 app.use('/api/orders',   require('./routes/orderRoutes'));
 app.use('/api/cart',     require('./routes/cartRoutes'));
-app.use('/api/payments', require('./routes/paymentRoutes'));
-app.use('/api/reviews',  require('./routes/reviewRoutes'));
+app.use('/api/payments',      require('./routes/paymentRoutes'));
+app.use('/api/reviews',       require('./routes/reviewRoutes'));
+app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/wishlist',      require('./routes/wishlistRoutes'));
 
 app.get('/', (req, res) => res.json({ message: 'ShopMate API running' }));
 

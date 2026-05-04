@@ -14,6 +14,7 @@ export interface Product {
 interface ProductContextData {
   products: Product[];
   isLoading: boolean;
+  error: string | null;
   fetchProducts: () => Promise<void>;
   getProduct: (id: string) => Promise<Product | null>;
   addProduct: (formData: FormData) => Promise<void>;
@@ -26,14 +27,17 @@ const ProductContext = createContext<ProductContextData>({} as ProductContextDat
 export const ProductProvider = ({ children }: { children: React.ReactNode }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchProducts = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const res = await api.get('/products');
       setProducts(res.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch products', error);
+      setError(error.message || 'Failed to load products');
     } finally {
       setIsLoading(false);
     }
@@ -92,7 +96,7 @@ export const ProductProvider = ({ children }: { children: React.ReactNode }) => 
   }, []);
 
   return (
-    <ProductContext.Provider value={{ products, isLoading, fetchProducts, getProduct, addProduct, updateProduct, deleteProduct }}>
+    <ProductContext.Provider value={{ products, isLoading, error, fetchProducts, getProduct, addProduct, updateProduct, deleteProduct }}>
       {children}
     </ProductContext.Provider>
   );

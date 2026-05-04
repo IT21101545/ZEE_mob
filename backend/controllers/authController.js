@@ -173,4 +173,6 @@ const verifyOtpAndReset = async (req, res) => {
   }
 };
 
+
+
 module.exports = { register, login, getProfile, updateProfile, getAllUsers, deleteUser, requestOtp, verifyOtpAndReset };

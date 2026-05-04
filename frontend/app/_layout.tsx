@@ -8,6 +8,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { ProductProvider } from '../context/ProductContext';
 import { CartProvider } from '../context/CartContext';
+import { ThemeProvider as CustomThemeProvider } from '../context/ThemeContext';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -45,12 +46,14 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <ProductProvider>
-        <CartProvider>
-          <RootLayoutNav />
-        </CartProvider>
-      </ProductProvider>
-    </AuthProvider>
+    <CustomThemeProvider>
+      <AuthProvider>
+        <ProductProvider>
+          <CartProvider>
+            <RootLayoutNav />
+          </CartProvider>
+        </ProductProvider>
+      </AuthProvider>
+    </CustomThemeProvider>
   );
 }

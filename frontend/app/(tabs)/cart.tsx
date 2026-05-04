@@ -3,10 +3,12 @@ import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet, ActivityIndi
 import { useCart, CartItem } from '../../context/CartContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function CartScreen() {
   const { cartItems, cartTotal, isLoading, updateCartItem, removeFromCart } = useCart();
   const router = useRouter();
+  const { colors } = useTheme();
 
   if (isLoading && cartItems.length === 0) {
     return (
@@ -18,9 +20,9 @@ export default function CartScreen() {
 
   if (cartItems.length === 0) {
     return (
-      <View style={styles.center}>
-        <MaterialIcons name="remove-shopping-cart" size={80} color="#ccc" />
-        <Text style={styles.emptyText}>Your cart is empty</Text>
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
+        <MaterialIcons name="remove-shopping-cart" size={80} color={colors.textMuted} />
+        <Text style={[styles.emptyText, { color: colors.textMuted }]}>Your cart is empty</Text>
         <TouchableOpacity style={styles.shopButton} onPress={() => router.push('/(tabs)')}>
           <Text style={styles.shopButtonText}>Start Shopping</Text>
         </TouchableOpacity>
@@ -29,19 +31,19 @@ export default function CartScreen() {
   }
 
   const renderItem = ({ item }: { item: CartItem }) => (
-    <View style={styles.cartItem}>
+    <View style={[styles.cartItem, { backgroundColor: colors.card }]}>
       <Image source={{ uri: item.product.image || 'https://via.placeholder.com/100' }} style={styles.image} />
       <View style={styles.itemInfo}>
-        <Text style={styles.name} numberOfLines={1}>{item.product.name}</Text>
-        <Text style={styles.price}>${item.product.price.toFixed(2)}</Text>
+        <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>{item.product.name}</Text>
+        <Text style={[styles.price, { color: colors.primary }]}>${item.product.price.toFixed(2)}</Text>
         
         <View style={styles.quantityContainer}>
           <TouchableOpacity onPress={() => updateCartItem(item.product._id, item.quantity - 1)}>
-            <MaterialIcons name="remove-circle-outline" size={24} color="#007AFF" />
+            <MaterialIcons name="remove-circle-outline" size={24} color={colors.primary} />
           </TouchableOpacity>
-          <Text style={styles.quantity}>{item.quantity}</Text>
+          <Text style={[styles.quantity, { color: colors.text }]}>{item.quantity}</Text>
           <TouchableOpacity onPress={() => updateCartItem(item.product._id, item.quantity + 1)}>
-            <MaterialIcons name="add-circle-outline" size={24} color="#007AFF" />
+            <MaterialIcons name="add-circle-outline" size={24} color={colors.primary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -52,17 +54,17 @@ export default function CartScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
         data={cartItems}
         keyExtractor={(item) => item.product._id}
         renderItem={renderItem}
         contentContainerStyle={styles.list}
       />
-      <View style={styles.footer}>
+      <View style={[styles.footer, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
         <View style={styles.totalContainer}>
-          <Text style={styles.totalLabel}>Total:</Text>
-          <Text style={styles.totalValue}>${cartTotal.toFixed(2)}</Text>
+          <Text style={[styles.totalLabel, { color: colors.text }]}>Total:</Text>
+          <Text style={[styles.totalValue, { color: colors.primary }]}>${cartTotal.toFixed(2)}</Text>
         </View>
         <TouchableOpacity style={styles.checkoutButton} onPress={() => router.push('/checkout')}>
           <Text style={styles.checkoutText}>Proceed to Checkout</Text>

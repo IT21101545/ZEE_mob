@@ -20,8 +20,7 @@ const createOrder = async (req, res) => {
         return res.status(400).json({ message: `Insufficient stock for ${product.name}` });
 
       // Deduct stock
-      product.stock -= item.quantity;
-      await product.save();
+      await Product.findByIdAndUpdate(product._id, { $inc: { stock: -item.quantity } });
 
       totalAmount += product.price * item.quantity;
       orderItems.push({

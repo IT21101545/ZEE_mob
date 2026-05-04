@@ -45,6 +45,20 @@ const getProductReviews = async (req, res) => {
   }
 };
 
+// GET /api/reviews
+const getAllReviews = async (req, res) => {
+  try {
+    const reviews = await Review.find()
+      .populate('user', 'name avatar')
+      .populate('product', 'name image')
+      .sort({ createdAt: -1 });
+
+    res.json(reviews);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // GET /api/reviews/my
 const getMyReviews = async (req, res) => {
   try {
@@ -73,6 +87,25 @@ const updateReview = async (req, res) => {
   }
 };
 
+// PUT /api/reviews/:id/reply
+const replyToReview = async (req, res) => {
+  try {
+    const review = await Review.findById(req.params.id);
+    if (!review) return res.status(404).json({ message: 'Review not found' });
+
+    review.reply = req.body.reply;
+    await review.save();
+    
+    // We populate after save to return complete data back to frontend if needed
+    await review.populate('user', 'name avatar');
+    await review.populate('product', 'name image');
+
+    res.json(review);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // DELETE /api/reviews/:id
 const deleteReview = async (req, res) => {
   try {
@@ -88,4 +121,4 @@ const deleteReview = async (req, res) => {
   }
 };
 
-module.exports = { createReview, getProductReviews, getMyReviews, updateReview, deleteReview };
+module.exports = { createReview, getProductReviews, getMyReviews, updateReview, deleteReview, getAllReviews, replyToReview };

@@ -9,6 +9,7 @@ const userSchema = new mongoose.Schema({
   avatar:   { type: String, default: '' },
   resetPasswordOTP: { type: String },
   resetPasswordExpires: { type: Date },
+  wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }]
 }, { timestamps: true });
 
 // Hash password before saving
