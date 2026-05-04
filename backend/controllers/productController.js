@@ -34,9 +34,15 @@ const createProduct = async (req, res) => {
     if (!name || !description || !price || !category)
       return res.status(400).json({ message: 'All fields are required' });
 
-    const getBaseUrl = req => `${req.protocol}://${req.get('host')}`;
-    const imageUrl      = req.file ? `${getBaseUrl(req)}/uploads/${req.file.filename}` : '';
-    const imagePublicId = req.file ? req.file.filename   : '';
+    // Handle Image URL (Cloudinary vs Local)
+    let imageUrl = '';
+    let imagePublicId = '';
+    if (req.file) {
+      imageUrl = req.file.path.startsWith('http') 
+        ? req.file.path 
+        : `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+      imagePublicId = req.file.filename;
+    }
 
     const product = await Product.create({
       name, description, price, category, stock,
@@ -69,8 +75,10 @@ const updateProduct = async (req, res) => {
     if (req.file) {
       if (product.imagePublicId)
         await cloudinary.uploader.destroy(product.imagePublicId);
-      const getBaseUrl = req => `${req.protocol}://${req.get('host')}`;
-      product.image        = `${getBaseUrl(req)}/uploads/${req.file.filename}`;
+      
+      product.image = req.file.path.startsWith('http') 
+        ? req.file.path 
+        : `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
       product.imagePublicId = req.file.filename;
     }
 

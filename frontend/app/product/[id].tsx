@@ -5,6 +5,7 @@ import { useProducts, Product } from '../../context/ProductContext';
 import { useAuth } from '../../context/AuthContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
+import { useCart } from '../../context/CartContext';
 import api from '../../api/axios';
 
 interface Review {

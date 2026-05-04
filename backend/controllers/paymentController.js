@@ -68,8 +68,9 @@ const uploadReceipt = async (req, res) => {
     if (!req.file)
       return res.status(400).json({ message: 'Receipt image is required' });
 
-    const getBaseUrl = req => `${req.protocol}://${req.get('host')}`;
-    payment.receiptImage = `${getBaseUrl(req)}/uploads/${req.file.filename}`;
+    payment.receiptImage = req.file.path.startsWith('http') 
+      ? req.file.path 
+      : `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
     payment.status = 'PendingReview';
     await payment.save();
 

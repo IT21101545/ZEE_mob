@@ -2,14 +2,9 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
-// Using the hosted Render backend for physical device testing/APK build
-const getBaseUrl = () => {
-   return 'http://192.168.8.178:5000/api';
-  // return 'https://zee-mob.onrender.com/api';
-};
 
 const api = axios.create({
-  baseURL: getBaseUrl(),
+  baseURL: 'https://zee-mob.onrender.com/api',
   headers: {
     'Content-Type': 'application/json',
   },
