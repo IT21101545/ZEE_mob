@@ -71,19 +71,16 @@ Create a `.env` file in the `backend` folder and add the following keys:
 PORT=5000
 
 # Database
-MONGO_URI=your_mongodb_connection_string
+MONGO_URI=mongodb+srv://hamdhanansar16_db_user:uw2odVqsDznx2AHe@cluster0.0pfpcne.mongodb.net/?appName=Cluster0
 
 # Authentication
-JWT_SECRET=your_super_secret_jwt_key
+JWT_SECRET=hfkjsdhf89w3y4r98weyhfsjdhfksjdfh8w34yr78we
 
-# Cloudinary (Image Uploads)
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
 
 # Nodemailer (OTP / Emails)
-EMAIL_USER=your_email@gmail.com
-EMAIL_PASS=your_email_app_password
+EMAIL_USER=hamdhanansar16@gmail.com
+EMAIL_PASS=wqslwyytpjjkrtlc
+
 \`\`\`
 
 **Run the Backend Server:**
